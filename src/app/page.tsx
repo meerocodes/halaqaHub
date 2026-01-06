@@ -1,5 +1,6 @@
 import React from 'react'
 import ClassSchedule from '@/app/components/Home/Courses'
+import EventCalendar from '@/app/components/Home/Calendar'
 import SlidesSection from '@/app/components/Home/Mentor'
 import QASession from '@/app/components/Home/Testimonial'
 import { Metadata } from 'next'
@@ -31,6 +32,7 @@ export default function Home() {
   return (
     <main>
       <ClassSchedule />
+      <EventCalendar />
       <SlidesSection />
       <QASession />
     </main>
