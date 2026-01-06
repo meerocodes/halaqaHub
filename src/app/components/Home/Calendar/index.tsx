@@ -19,7 +19,6 @@ const EventCalendar = () => {
       const { data } = await supabase
         .from('classes')
         .select('*')
-        .gte('class_date', new Date().toISOString())
         .order('class_date', { ascending: true })
       setClasses(data ?? [])
       setLoading(false)
@@ -37,7 +36,11 @@ const EventCalendar = () => {
   }
 
   const classesOnDate = (day: number) => {
-    const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+    const dateStr = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      day
+    )
       .toISOString()
       .split('T')[0]
     return classes.filter((cls) => cls.class_date.split('T')[0] === dateStr)
@@ -73,25 +76,58 @@ const EventCalendar = () => {
       )
     : []
 
+  const now = new Date()
+  const upcomingCount = classes.filter(
+    (cls) => new Date(cls.class_date) >= now
+  ).length
+  const pastCount = classes.length - upcomingCount
+
   return (
-    <section id='calendar-section' className='py-16 md:py-20'>
+    <section
+      id='calendar-section'
+      className='py-16 md:py-20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.12),_transparent_55%)]'
+    >
       <div className='container'>
-        <div className='mb-8'>
-          <p className='text-sm uppercase tracking-[0.3em] text-primary'>
-            Upcoming Events
-          </p>
-          <h2 className='font-bold tracking-tight mb-2'>
-            Event Calendar
-          </h2>
-          <p className='text-base text-gray-500'>
-            Browse our halaqat schedule by month. Click on any date to see the events scheduled.
-          </p>
+        <div className='mb-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end'>
+          <div>
+            <p className='text-sm uppercase tracking-[0.3em] text-primary'>
+              Community Schedule
+            </p>
+            <h2 className='font-bold tracking-tight mb-2'>
+              Event Calendar
+            </h2>
+            <p className='text-base text-gray-500'>
+              Browse past and upcoming halaqat by month. Click any date to see
+              the lineup.
+            </p>
+          </div>
+          <div className='bg-white/90 border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center justify-between'>
+            <div>
+              <p className='text-xs uppercase tracking-[0.2em] text-gray-400'>
+                Snapshot
+              </p>
+              <p className='text-lg font-semibold text-gray-900'>
+                {classes.length} total events
+              </p>
+            </div>
+            <div className='flex items-center gap-3 text-xs font-semibold'>
+              <span className='px-2.5 py-1 rounded-full bg-primary/10 text-primary'>
+                {upcomingCount} upcoming
+              </span>
+              <span className='px-2.5 py-1 rounded-full bg-gray-100 text-gray-600'>
+                {pastCount} past
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className='grid gap-6 lg:grid-cols-3'>
           <div className='lg:col-span-2 bg-white border border-gray-100 rounded-3xl p-6 shadow-sm'>
             <div className='flex items-center justify-between mb-6'>
-              <h3 className='text-lg font-semibold text-black'>{monthYear}</h3>
+              <div>
+                <h3 className='text-lg font-semibold text-black'>{monthYear}</h3>
+                <p className='text-xs text-gray-500'>Tap a day to explore</p>
+              </div>
               <div className='flex gap-2'>
                 <button
                   onClick={previousMonth}
@@ -132,6 +168,9 @@ const EventCalendar = () => {
                 <div className='grid grid-cols-7 gap-2'>
                   {days.map((day, idx) => {
                     const classesOnThisDay = day ? classesOnDate(day) : []
+                    const hasUpcoming = classesOnThisDay.some(
+                      (cls) => new Date(cls.class_date) >= now
+                    )
                     const isToday =
                       day &&
                       new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString() ===
@@ -165,12 +204,19 @@ const EventCalendar = () => {
                       >
                         {day && (
                           <>
-                            <div>{day}</div>
+                            <div className='text-base'>{day}</div>
                             {classesOnThisDay.length > 0 && (
-                              <div className={`text-xs mt-1 font-semibold ${
-                                isSelected ? 'text-white' : 'text-primary'
-                              }`}>
-                                {classesOnThisDay.length} event{classesOnThisDay.length > 1 ? 's' : ''}
+                              <div
+                                className={`text-[11px] mt-1 font-semibold ${
+                                  isSelected
+                                    ? 'text-white'
+                                    : hasUpcoming
+                                      ? 'text-primary'
+                                      : 'text-gray-500'
+                                }`}
+                              >
+                                {classesOnThisDay.length} event
+                                {classesOnThisDay.length > 1 ? 's' : ''}
                               </div>
                             )}
                           </>
@@ -199,19 +245,41 @@ const EventCalendar = () => {
                 <div className='space-y-3'>
                   {classesForSelectedDate.map((cls) => {
                     const classDate = new Date(cls.class_date)
+                    const isPast = classDate < now
                     return (
                       <div
                         key={cls.id}
-                        className='border border-gray-200 rounded-lg p-4 hover:border-primary transition'
+                        className={`border rounded-lg p-4 transition ${
+                          isPast
+                            ? 'border-gray-200 bg-gray-50'
+                            : 'border-gray-200 hover:border-primary'
+                        }`}
                       >
-                        <p className='text-sm font-semibold text-primary mb-1'>
-                          {classDate.toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true,
-                          })}
+                        <div className='flex items-center justify-between mb-2'>
+                          <p
+                            className={`text-sm font-semibold ${
+                              isPast ? 'text-gray-500' : 'text-primary'
+                            }`}
+                          >
+                            {classDate.toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}
+                          </p>
+                          <span
+                            className={`text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-1 rounded-full ${
+                              isPast
+                                ? 'bg-gray-200 text-gray-600'
+                                : 'bg-primary/10 text-primary'
+                            }`}
+                          >
+                            {isPast ? 'Past' : 'Upcoming'}
+                          </span>
+                        </div>
+                        <p className='text-sm font-semibold text-black mb-2'>
+                          {cls.title}
                         </p>
-                        <p className='text-sm font-semibold text-black mb-2'>{cls.title}</p>
                         {cls.subtitle && (
                           <p className='text-xs text-gray-600 mb-2'>{cls.subtitle}</p>
                         )}
