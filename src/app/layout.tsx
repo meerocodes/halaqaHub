@@ -52,7 +52,7 @@ export default function RootLayout({
         <AuthProvider>
           <Aoscompo>
             <Header />
-            <main className='pt-24'>
+            <main className='pt-32'>
               {children}
             </main>
             <Footer />
