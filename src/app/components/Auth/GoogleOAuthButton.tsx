@@ -5,7 +5,11 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import Loader from '../Common/Loader'
 
-const SocialSignUp = () => {
+type GoogleOAuthButtonProps = {
+  label?: string
+}
+
+const GoogleOAuthButton = ({ label = 'Continue with Google' }: GoogleOAuthButtonProps) => {
   const [loading, setLoading] = useState(false)
 
   const handleGoogleSignUp = async () => {
@@ -62,9 +66,9 @@ const SocialSignUp = () => {
           fill='#EA4335'
         />
       </svg>
-      Continue with Google {loading && <Loader />}
+      {label} {loading && <Loader />}
     </button>
   )
 }
 
-export default SocialSignUp
+export default GoogleOAuthButton

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
-import SocialSignUp from '../SocialSignUp'
+import GoogleOAuthButton from '../GoogleOAuthButton'
 import Logo from '@/app/components/Layout/Header/Logo'
 import Loader from '@/app/components/Common/Loader'
 import { supabase } from '@/lib/supabaseClient'
@@ -62,7 +62,7 @@ const SignUp = ({ onSuccess, hideLogo = false }: SignUpProps) => {
         </div>
       )}
 
-      <SocialSignUp />
+      <GoogleOAuthButton />
 
       <span className="z-1 relative my-8 block text-center before:content-[''] before:absolute before:h-px before:w-[40%] before:bg-black/20 before:left-0 before:top-3 after:content-[''] after:absolute after:h-px after:w-[40%] after:bg-black/20 after:top-3 after:right-0">
         <span className='text-body-secondary relative z-10 inline-block px-3 text-base text-black'>

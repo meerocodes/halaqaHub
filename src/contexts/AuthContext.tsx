@@ -18,6 +18,7 @@ type AuthContextValue = {
   user: User | null
   role: UserRole
   isAdmin: boolean
+  isSuperAdmin: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -40,6 +41,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user])
 
   const isAdmin = role === 'admin'
+  const isSuperAdmin =
+    user?.email?.toLowerCase() === 'amir@kc.com'
 
   const syncSession = useCallback(async () => {
     const {
@@ -86,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     role,
     isAdmin,
+    isSuperAdmin,
     loading,
     signIn,
     signOut,

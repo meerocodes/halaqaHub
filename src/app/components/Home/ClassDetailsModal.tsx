@@ -96,13 +96,27 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
   }, [loadDetails])
 
   const handleAttend = async () => {
+    if (!user) {
+      toast.error('Please sign in to check in.')
+      return
+    }
     if (!attendeeName.trim()) return
     setAttending(true)
-    await supabase.from('attendance').insert({
+    const { error } = await supabase.from('attendance').insert({
       attendee_name: attendeeName.trim(),
       class_id: classItem.id,
+      user_id: user.id,
     })
     setAttending(false)
+    if (error) {
+      if (error.message.toLowerCase().includes('duplicate')) {
+        toast('You are already checked in.', { icon: 'ℹ️' })
+      } else {
+        toast.error('Unable to check you in right now.')
+      }
+      return
+    }
+    toast.success('You are checked in!')
     loadDetails()
   }
 
@@ -214,7 +228,7 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
               <button
                 type='button'
                 onClick={handleAttend}
-                disabled={attending || !attendeeName}
+                disabled={attending || !attendeeName || !user}
                 className='bg-primary text-white rounded-xl py-3 font-semibold hover:bg-primary/90 transition disabled:opacity-60 disabled:cursor-not-allowed w-full'
               >
                 {attending ? 'Checking you in...' : 'Check me in'}

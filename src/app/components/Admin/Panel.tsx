@@ -62,8 +62,9 @@ const AdminPanel = () => {
     ])
 
     if (classesRes.data) {
+      const classRows: Class[] = classesRes.data as Class[]
       const classesWithAttendance = await Promise.all(
-        classesRes.data.map(async (cls) => {
+        classRows.map(async (cls) => {
           const [{ data: attendees }, { data: suggestions }] = await Promise.all(
             [
               supabase

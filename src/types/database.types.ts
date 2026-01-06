@@ -47,18 +47,21 @@ export interface Database {
           class_id: string
           attendee_name: string
           checked_in_at: string
+          user_id: string | null
         }
         Insert: {
           id?: string
           class_id: string
           attendee_name: string
           checked_in_at?: string
+          user_id?: string | null
         }
         Update: {
           id?: string
           class_id?: string
           attendee_name?: string
           checked_in_at?: string
+          user_id?: string | null
         }
       }
       slides: {

@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/app/components/Layout/Header";
 import Footer from "@/app/components/Layout/Footer";
-import ScrollToTop from "@/app/components/ScrollToTop";
 import Aoscompo from "@/utils/aos";
 import { AuthProvider } from "@/contexts/AuthContext";
 
@@ -58,7 +57,6 @@ export default function RootLayout({
             </main>
             <Footer />
           </Aoscompo>
-          <ScrollToTop />
         </AuthProvider>
       </body>
     </html>

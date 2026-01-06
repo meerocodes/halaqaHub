@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import Logo from '@/app/components/Layout/Header/Logo'
 import Loader from '@/app/components/Common/Loader'
 import { useAuth } from '@/contexts/AuthContext'
+import GoogleOAuthButton from '../GoogleOAuthButton'
 
 type SigninProps = {
   onSuccess?: () => void
@@ -45,6 +46,16 @@ const Signin = ({ onSuccess, hideLogo = false }: SigninProps) => {
           <Logo />
         </div>
       )}
+
+      <div className='mb-4'>
+        <GoogleOAuthButton label='Sign in with Google' />
+      </div>
+
+      <span className="z-1 relative my-6 block text-center before:content-[''] before:absolute before:h-px before:w-[40%] before:bg-black/20 before:left-0 before:top-3 after:content-[''] after:absolute after:h-px after:w-[40%] after:bg-black/20 after:top-3 after:right-0">
+        <span className='text-body-secondary relative z-10 inline-block px-3 text-sm text-black/60'>
+          or
+        </span>
+      </span>
 
       <form onSubmit={loginUser}>
         <div className='mb-[22px]'>

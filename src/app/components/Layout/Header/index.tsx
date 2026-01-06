@@ -12,7 +12,7 @@ const Header: React.FC = () => {
   const [navbarOpen, setNavbarOpen] = useState(false)
   const [sticky, setSticky] = useState(false)
   const [isSignInOpen, setIsSignInOpen] = useState(false)
-  const { user, isAdmin, signOut } = useAuth()
+  const { user, isAdmin, isSuperAdmin, signOut } = useAuth()
   const signInRef = useRef<HTMLDivElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
 
@@ -81,6 +81,13 @@ const Header: React.FC = () => {
                 href='/admin'
                 className='hidden lg:block bg-transparent text-primary border hover:bg-primary border-primary hover:text-white duration-300 px-6 py-2 rounded-lg hover:cursor-pointer'>
                 Admin Panel
+              </Link>
+            )}
+            {isSuperAdmin && (
+              <Link
+                href='/superadmin'
+                className='hidden lg:block bg-transparent text-primary border hover:bg-primary border-primary hover:text-white duration-300 px-6 py-2 rounded-lg hover:cursor-pointer'>
+                Superadmin
               </Link>
             )}
             {user ? (
@@ -161,6 +168,14 @@ const Header: React.FC = () => {
                 className='text-primary font-semibold mt-4'
                 onClick={() => setNavbarOpen(false)}>
                 Admin Panel
+              </Link>
+            )}
+            {isSuperAdmin && (
+              <Link
+                href='/superadmin'
+                className='text-primary font-semibold mt-2'
+                onClick={() => setNavbarOpen(false)}>
+                Superadmin
               </Link>
             )}
             <div className='mt-4 flex flex-col gap-4 w-full'>
