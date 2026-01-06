@@ -1,0 +1,274 @@
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import {
+  Calendar,
+  CheckCircle2,
+  MapPin,
+  User,
+  Users,
+  X,
+} from 'lucide-react'
+import { supabase } from '@/lib/supabaseClient'
+import type { Database } from '@/types/database.types'
+
+type ClassRow = Database['public']['Tables']['classes']['Row']
+type Attendance = Database['public']['Tables']['attendance']['Row']
+type ProfessorSuggestion =
+  Database['public']['Tables']['professor_suggestions']['Row']
+
+type ClassDetailsModalProps = {
+  classItem: ClassRow
+  onClose: () => void
+}
+
+const formatDate = (isoDate: string) =>
+  new Date(isoDate).toLocaleString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
+  const [attendees, setAttendees] = useState<Attendance[]>([])
+  const [suggestions, setSuggestions] = useState<ProfessorSuggestion[]>([])
+  const [attendeeName, setAttendeeName] = useState('')
+  const [profName, setProfName] = useState('')
+  const [profTopic, setProfTopic] = useState('')
+  const [attending, setAttending] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+  const [voting, setVoting] = useState<string | null>(null)
+
+  useEffect(() => {
+    const body = document.querySelector('body')
+    if (body) body.style.overflow = 'hidden'
+    return () => {
+      if (body) body.style.overflow = ''
+    }
+  }, [])
+
+  const loadDetails = useCallback(async () => {
+    const [{ data: attendeeRows }, { data: suggestionRows }] =
+      await Promise.all([
+        supabase
+          .from('attendance')
+          .select('*')
+          .eq('class_id', classItem.id)
+          .order('checked_in_at', { ascending: false }),
+        supabase
+          .from('professor_suggestions')
+          .select('*')
+          .eq('class_id', classItem.id)
+          .order('votes', { ascending: false }),
+      ])
+
+    setAttendees(attendeeRows ?? [])
+    setSuggestions(suggestionRows ?? [])
+  }, [classItem.id])
+
+  useEffect(() => {
+    loadDetails()
+  }, [loadDetails])
+
+  const handleAttend = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!attendeeName.trim()) return
+    setAttending(true)
+    await supabase.from('attendance').insert({
+      attendee_name: attendeeName.trim(),
+      class_id: classItem.id,
+    })
+    setAttendeeName('')
+    setAttending(false)
+    loadDetails()
+  }
+
+  const handleSuggestion = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!profName.trim() || !profTopic.trim()) return
+    setSuggesting(true)
+    await supabase.from('professor_suggestions').insert({
+      class_id: classItem.id,
+      name: profName.trim(),
+      topic: profTopic.trim(),
+    })
+    setProfName('')
+    setProfTopic('')
+    setSuggesting(false)
+    loadDetails()
+  }
+
+  const handleVote = async (suggestionId: string, currentVotes: number) => {
+    setVoting(suggestionId)
+    await supabase
+      .from('professor_suggestions')
+      .update({ votes: currentVotes + 1 })
+      .eq('id', suggestionId)
+    setVoting(null)
+    loadDetails()
+  }
+
+  return (
+    <div
+      className='fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 py-8'
+      onClick={onClose}
+    >
+      <div
+        className='bg-white rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden max-h-[90vh] flex flex-col'
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className='bg-gradient-to-r from-primary to-primary/80 text-white p-6'>
+          <div className='flex items-start justify-between gap-6'>
+            <div>
+              <p className='uppercase text-xs tracking-[0.2em] text-white/80 mb-2'>
+                {new Date(classItem.class_date) > new Date()
+                  ? 'Upcoming class'
+                  : 'Past class'}
+              </p>
+              <h2 className='text-3xl font-semibold leading-tight'>
+                {classItem.title}
+              </h2>
+              {classItem.subtitle && (
+                <p className='text-lg text-white/85 mt-1'>{classItem.subtitle}</p>
+              )}
+              <p className='flex items-center gap-2 mt-4 text-sm text-white/90'>
+                <Calendar className='w-4 h-4' />
+                {formatDate(classItem.class_date)}
+              </p>
+              <p className='flex items-center gap-2 text-sm text-white/90 mt-1'>
+                <MapPin className='w-4 h-4' />
+                {classItem.location}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className='bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition'
+            >
+              <X className='w-5 h-5' />
+            </button>
+          </div>
+        </div>
+
+        <div className='grid gap-6 p-6 overflow-y-auto lg:grid-cols-2'>
+          <div className='space-y-6'>
+            <div className='border border-gray-200 rounded-2xl p-5'>
+              <div className='flex items-center gap-3 mb-4'>
+                <Users className='text-primary w-5 h-5' />
+                <div>
+                  <p className='text-base font-semibold text-black'>
+                    Attendance check-in
+                  </p>
+                  <p className='text-sm text-gray-500'>
+                    {attendees.length} brothers & sisters already checked in
+                  </p>
+                </div>
+              </div>
+              <form onSubmit={handleAttend} className='flex flex-col gap-3'>
+                <input
+                  type='text'
+                  placeholder='Enter your name'
+                  value={attendeeName}
+                  onChange={(e) => setAttendeeName(e.target.value)}
+                  className='border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40'
+                />
+                <button
+                  type='submit'
+                  disabled={attending}
+                  className='bg-primary text-white rounded-xl py-3 font-semibold hover:bg-primary/90 transition disabled:opacity-60 disabled:cursor-not-allowed'
+                >
+                  {attending ? 'Checking you in...' : 'Check me in'}
+                </button>
+              </form>
+              {attendees.length > 0 && (
+                <ul className='mt-4 space-y-2 max-h-44 overflow-y-auto pr-2 text-sm text-gray-600'>
+                  {attendees.map((person) => (
+                    <li key={person.id} className='flex items-center gap-2'>
+                      <User className='w-4 h-4 text-primary/70' />
+                      <span>{person.attendee_name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className='border border-gray-200 rounded-2xl p-5'>
+              <div className='flex items-center gap-3 mb-4'>
+                <CheckCircle2 className='text-primary w-5 h-5' />
+                <div>
+                  <p className='text-base font-semibold text-black'>
+                    Suggest a guest speaker
+                  </p>
+                  <p className='text-sm text-gray-500'>
+                    Share who you want to learn from next
+                  </p>
+                </div>
+              </div>
+              <form onSubmit={handleSuggestion} className='flex flex-col gap-3'>
+                <input
+                  type='text'
+                  placeholder='Instructor name'
+                  value={profName}
+                  onChange={(e) => setProfName(e.target.value)}
+                  className='border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40'
+                />
+                <input
+                  type='text'
+                  placeholder='Topic you would like covered'
+                  value={profTopic}
+                  onChange={(e) => setProfTopic(e.target.value)}
+                  className='border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40'
+                />
+                <button
+                  type='submit'
+                  disabled={suggesting}
+                  className='bg-black text-white rounded-xl py-3 font-semibold hover:bg-black/80 transition disabled:opacity-60 disabled:cursor-not-allowed'
+                >
+                  {suggesting ? 'Sending...' : 'Submit suggestion'}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className='border border-gray-200 rounded-2xl p-5'>
+            <p className='text-base font-semibold text-black mb-4'>
+              Suggestions from the community
+            </p>
+            {suggestions.length === 0 ? (
+              <p className='text-gray-500 text-sm'>
+                No suggestions yet. Be the first to share who should teach the
+                next halaqa!
+              </p>
+            ) : (
+              <ul className='space-y-4'>
+                {suggestions.map((suggestion) => (
+                  <li
+                    key={suggestion.id}
+                    className='border border-gray-100 rounded-xl p-4'
+                  >
+                    <p className='font-semibold text-black'>{suggestion.name}</p>
+                    <p className='text-sm text-gray-500 mt-1'>
+                      {suggestion.topic}
+                    </p>
+                    <button
+                      onClick={() =>
+                        handleVote(suggestion.id, suggestion.votes ?? 0)
+                      }
+                      disabled={voting === suggestion.id}
+                      className='mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary px-3 py-1.5 border border-primary rounded-full hover:bg-primary hover:text-white transition disabled:opacity-60 disabled:cursor-not-allowed'
+                    >
+                      + {suggestion.votes ?? 0} votes
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default ClassDetailsModal
