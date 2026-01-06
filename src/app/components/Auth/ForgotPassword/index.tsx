@@ -11,7 +11,7 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [loader, setLoader] = useState(false);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!email) {
@@ -39,8 +39,15 @@ const ForgotPassword = () => {
 
       setEmail("");
       setLoader(false);
-    } catch (error: any) {
-      toast.error(error?.response.data);
+    } catch (error) {
+      const message =
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        (error as { response?: { data?: string } })?.response?.data
+          ? (error as { response?: { data?: string } }).response?.data
+          : 'Unable to send email right now.'
+      toast.error(message as string)
       setLoader(false);
     }
   };

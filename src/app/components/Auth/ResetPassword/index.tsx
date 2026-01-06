@@ -32,8 +32,15 @@ const ResetPassword = ({ token }: { token: string }) => {
             email: res.data.email,
           });
         }
-      } catch (error: any) {
-        toast.error(error?.response?.data);
+      } catch (error) {
+        const message =
+          error &&
+          typeof error === 'object' &&
+          'response' in error &&
+          (error as { response?: { data?: string } })?.response?.data
+            ? (error as { response?: { data?: string } }).response?.data
+            : 'Invalid or expired token.'
+        toast.error(message as string)
         router.push("/forgot-password");
       }
     };
@@ -71,8 +78,15 @@ const ResetPassword = ({ token }: { token: string }) => {
       }
 
       setLoader(false);
-    } catch (error: any) {
-      toast.error(error.response.data);
+    } catch (error) {
+      const message =
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        (error as { response?: { data?: string } })?.response?.data
+          ? (error as { response?: { data?: string } }).response?.data
+          : 'Unable to reset password right now.'
+      toast.error(message as string)
       setLoader(false);
     }
   };
