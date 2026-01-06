@@ -5,6 +5,7 @@ import { CalendarDays, Clock4, MapPin, NotebookText } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import type { Database } from '@/types/database.types'
 import ClassDetailsModal from '../ClassDetailsModal'
+import QuickQA from '../QuickQA'
 
 type ClassRow = Database['public']['Tables']['classes']['Row']
 
@@ -214,6 +215,10 @@ const ClassSchedule = () => {
               </ul>
             )}
           </div>
+        </div>
+
+        <div className='mt-8'>
+          <QuickQA />
         </div>
       </div>
 
