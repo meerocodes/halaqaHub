@@ -5,7 +5,18 @@ import Image from 'next/image'
 
 const Banner = () => {
   return (
-    <section id='Home' className='bg-banner-image pt-28 pb-20'>
+    <section
+      id='Home'
+      className='relative overflow-hidden bg-gradient-to-b from-primary/5 via-cream to-white pt-28 pb-20'
+    >
+      <div
+        className='pointer-events-none absolute -top-24 -right-16 h-72 w-72 rounded-full bg-primary/20 blur-3xl'
+        aria-hidden='true'
+      />
+      <div
+        className='pointer-events-none absolute bottom-0 left-[-5%] h-64 w-64 rounded-full bg-primary/10 blur-3xl'
+        aria-hidden='true'
+      />
       <div className='relative px-6 lg:px-8'>
         <div className='container'>
           <div className='flex flex-col gap-4 text-center'>

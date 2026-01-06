@@ -7,12 +7,22 @@
 
   --inset-54\%: 54%;
 
-  --color-primary: #611f69;
-  --color-cream: #fcf5ef;
-  --color-success: #6b9f36;
-  --color-orange: #f9cd92;
+  --color-primary: #0f6b4a;
+  --color-cream: #f2f8f4;
+  --color-success: #1f8a61;
+  --color-orange: #cbb27d;
 
-  --background-image-banner-image: url('/images/banner/background.png');
+  --background-image-banner-image: radial-gradient(
+      circle at 15% 20%,
+      rgba(15, 107, 74, 0.15),
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 30%,
+      rgba(15, 107, 74, 0.12),
+      transparent 55%
+    ),
+    linear-gradient(135deg, #f7faf7 0%, #f1f7f3 40%, #ffffff 100%);
   --background-image-newsletter: url('/images/newsletter/hands.svg');
 }
 

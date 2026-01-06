@@ -193,6 +193,26 @@ export interface Database {
           votes?: number
         }
       }
+      professor_suggestion_votes: {
+        Row: {
+          id: string
+          suggestion_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          suggestion_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          suggestion_id?: string
+          user_id?: string
+          created_at?: string
+        }
+      }
     }
   }
 }

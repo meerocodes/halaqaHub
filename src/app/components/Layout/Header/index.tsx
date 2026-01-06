@@ -93,7 +93,7 @@ const Header: React.FC = () => {
               <button
                 className='hidden lg:block bg-primary text-white text-base font-medium hover:bg-transparent duration-300 hover:text-primary border border-primary px-6 py-2 rounded-lg hover:cursor-pointer'
                 onClick={() => setIsSignInOpen(true)}>
-                Admin Sign In
+                Sign In
               </button>
             )}
             {isSignInOpen && (
@@ -174,7 +174,7 @@ const Header: React.FC = () => {
                   }
                   setNavbarOpen(false)
                 }}>
-                {user ? 'Sign Out' : 'Admin Sign In'}
+                {user ? 'Sign Out' : 'Sign In'}
               </button>
             </div>
           </nav>

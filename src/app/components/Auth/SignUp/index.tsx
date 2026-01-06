@@ -1,47 +1,66 @@
 'use client'
+
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
 import SocialSignUp from '../SocialSignUp'
 import Logo from '@/app/components/Layout/Header/Logo'
-import { useState } from 'react'
 import Loader from '@/app/components/Common/Loader'
-const SignUp = () => {
-  const router = useRouter()
+import { supabase } from '@/lib/supabaseClient'
+import { useAuth } from '@/contexts/AuthContext'
+
+type SignUpProps = {
+  onSuccess?: () => void
+  hideLogo?: boolean
+}
+
+const SignUp = ({ onSuccess, hideLogo = false }: SignUpProps) => {
+  const { signIn } = useAuth()
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+  })
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-
     setLoading(true)
-    const data = new FormData(e.currentTarget)
-    const value = Object.fromEntries(data.entries())
-    const finalData = { ...value }
-
-    fetch('/api/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(finalData),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        toast.success('Successfully registered')
-        setLoading(false)
-        router.push('/signin')
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            role: 'basic',
+          },
+        },
       })
-      .catch((err) => {
-        toast.error(err.message)
-        setLoading(false)
-      })
+      if (error) {
+        throw error
+      }
+      await signIn(formData.email, formData.password)
+      toast.success('Account created! You are now signed in.')
+      setFormData({ name: '', email: '', password: '' })
+      onSuccess?.()
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Unable to sign up right now'
+      toast.error(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <>
-      <div className='mb-10 text-center mx-auto inline-block max-w-[160px]'>
-        <Logo />
-      </div>
+      {!hideLogo && (
+        <div className='mb-10 text-center mx-auto inline-block max-w-[160px]'>
+          <Logo />
+        </div>
+      )}
 
       <SocialSignUp />
 
@@ -57,6 +76,10 @@ const SignUp = () => {
             type='text'
             placeholder='Name'
             name='name'
+            value={formData.name}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, name: e.target.value }))
+            }
             required
             className='w-full rounded-md border border-solid bg-transparent px-5 py-3 text-base text-dark outline-hidden transition border-gray-200 placeholder:text-black/30 focus:border-primary focus-visible:shadow-none text-black'
           />
@@ -66,18 +89,33 @@ const SignUp = () => {
             type='email'
             placeholder='Email'
             name='email'
+            value={formData.email}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, email: e.target.value }))
+            }
             required
             className='w-full rounded-md border border-solid bg-transparent px-5 py-3 text-base text-dark outline-hidden transition border-gray-200 placeholder:text-black/30 focus:border-primary focus-visible:shadow-none text-black'
           />
         </div>
-        <div className='mb-[22px]'>
+        <div className='mb-[22px] relative'>
           <input
-            type='password'
+            type={showPassword ? 'text' : 'password'}
             placeholder='Password'
             name='password'
+            value={formData.password}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, password: e.target.value }))
+            }
             required
-            className='w-full rounded-md border border-solid bg-transparent px-5 py-3 text-base text-dark outline-hidden transition border-gray-200 placeholder:text-black/30 focus:border-primary focus-visible:shadow-none text-black'
+            className='w-full rounded-md border border-solid bg-transparent px-5 py-3 pr-12 text-base text-dark outline-hidden transition border-gray-200 placeholder:text-black/30 focus:border-primary focus-visible:shadow-none text-black'
           />
+          <button
+            type='button'
+            onClick={() => setShowPassword((prev) => !prev)}
+            className='absolute inset-y-0 right-3 text-sm text-gray-500 hover:text-primary'
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
         </div>
         <div className='mb-9'>
           <button
@@ -101,7 +139,7 @@ const SignUp = () => {
 
       <p className='text-body-secondary text-black text-base'>
         Already have an account?
-        <Link href='/' className='pl-2 text-primary hover:underline'>
+        <Link href='/signin' className='pl-2 text-primary hover:underline'>
           Sign In
         </Link>
       </p>

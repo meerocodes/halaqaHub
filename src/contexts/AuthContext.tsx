@@ -12,8 +12,11 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
 
+type UserRole = 'admin' | 'basic'
+
 type AuthContextValue = {
   user: User | null
+  role: UserRole
   isAdmin: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
@@ -26,10 +29,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const isAdmin = useMemo(() => {
-    const metadata = user?.app_metadata as Record<string, unknown> | undefined
-    return metadata?.role === 'admin'
+  const role = useMemo<UserRole>(() => {
+    const appMeta = user?.app_metadata as Record<string, unknown> | undefined
+    const userMeta = user?.user_metadata as Record<string, unknown> | undefined
+    const derivedRole =
+      appMeta?.role === 'admin' || userMeta?.role === 'admin'
+        ? 'admin'
+        : 'basic'
+    return derivedRole
   }, [user])
+
+  const isAdmin = role === 'admin'
 
   const syncSession = useCallback(async () => {
     const {
@@ -74,6 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value: AuthContextValue = {
     user,
+    role,
     isAdmin,
     loading,
     signIn,

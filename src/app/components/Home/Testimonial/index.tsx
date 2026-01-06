@@ -40,6 +40,7 @@ const QASession = () => {
     null
   )
   const [question, setQuestion] = useState('')
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
     new Set()
@@ -93,18 +94,16 @@ const QASession = () => {
     setLoading(true)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const { data: todayRows } = await supabase
+    const { data: upcomingRows } = await supabase
       .from('classes')
       .select('*')
       .gte('class_date', today.toISOString())
-      .lt('class_date', tomorrow.toISOString())
+      .eq('qa_open', true)
       .order('class_date', { ascending: true })
 
     const hydrated = await Promise.all(
-      (todayRows ?? []).map(async (cls) => ({
+      (upcomingRows ?? []).map(async (cls) => ({
         ...cls,
         questions: await fetchQuestionsWithMeta(cls.id),
       }))
@@ -131,6 +130,21 @@ const QASession = () => {
     },
     [fetchQuestionsWithMeta]
   )
+
+  const handleReplySubmit = async (
+    questionId: string,
+    classId: string
+  ): Promise<void> => {
+    const reply = replyInputs[questionId]?.trim()
+    if (!reply)
+      return
+    await supabase.from('question_replies').insert({
+      question_id: questionId,
+      reply,
+    })
+    setReplyInputs((prev) => ({ ...prev, [questionId]: '' }))
+    await loadQuestions(classId)
+  }
 
   useEffect(() => {
     loadClasses()
@@ -223,34 +237,44 @@ const QASession = () => {
 
         {loading ? (
           <div className='bg-white rounded-3xl border border-gray-100 p-10 text-center'>
-            <p className='text-gray-500'>Loading today&apos;s session...</p>
+            <p className='text-gray-500'>Loading upcoming Q&amp;A sessions...</p>
           </div>
         ) : !hasClasses ? (
           <div className='bg-white rounded-3xl border border-gray-100 p-10 text-center'>
             <MessageCircle className='mx-auto w-8 h-8 text-primary mb-3' />
-            <p className='text-gray-500'>Q&A opens when we have class.</p>
+            <p className='text-gray-500'>
+              No classes currently have Q&amp;A open. Check back soon.
+            </p>
           </div>
         ) : (
           <div className='grid gap-6 lg:grid-cols-[1.2fr,0.8fr]'>
-            <div className='bg-white rounded-3xl border border-gray-100 p-6'>
-              <div className='flex flex-col gap-4'>
+              <div className='bg-white rounded-3xl border border-gray-100 p-6'>
+                <div className='flex flex-col gap-4'>
                 {classes.length > 1 && (
-                  <select
-                    value={selectedClass?.id}
-                    onChange={(e) => {
-                      const match = classes.find(
-                        (cls) => cls.id === e.target.value
-                      )
-                      setSelectedClass(match ?? null)
-                    }}
-                    className='border border-gray-200 rounded-2xl px-4 py-3 text-base focus:ring-primary focus:outline-none'
-                  >
-                    {classes.map((cls) => (
-                      <option key={cls.id} value={cls.id}>
-                        {cls.title}
-                      </option>
-                    ))}
-                  </select>
+                  <div className='flex flex-col gap-2'>
+                    <p className='text-sm font-medium text-gray-700'>
+                      Choose a class
+                    </p>
+                    <div className='flex flex-wrap gap-2'>
+                      {classes.map((cls) => {
+                        const isSelected = cls.id === selectedClass?.id
+                        return (
+                          <button
+                            key={cls.id}
+                            type='button'
+                            onClick={() => setSelectedClass(cls)}
+                            className={`px-4 py-2 rounded-2xl border text-sm font-semibold transition-colors ${
+                              isSelected
+                                ? 'bg-primary text-white border-primary'
+                                : 'border-gray-200 text-gray-600 hover:border-primary/60'
+                            }`}
+                          >
+                            {cls.title}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
 
                 {selectedClass && (
@@ -373,6 +397,33 @@ const QASession = () => {
                                 )}
                               </div>
                             )}
+                            <form
+                              className='mt-4 flex gap-2'
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                handleReplySubmit(item.id, item.class_id)
+                              }}
+                            >
+                              <input
+                                type='text'
+                                placeholder='Reply to this question'
+                                value={replyInputs[item.id] ?? ''}
+                                onChange={(e) =>
+                                  setReplyInputs((prev) => ({
+                                    ...prev,
+                                    [item.id]: e.target.value,
+                                  }))
+                                }
+                                className='flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50'
+                              />
+                              <button
+                                type='submit'
+                                className='bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-60'
+                                disabled={!(replyInputs[item.id]?.trim())}
+                              >
+                                Reply
+                              </button>
+                            </form>
                           </div>
                         ))
                       )}

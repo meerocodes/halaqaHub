@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Calendar,
   CheckCircle2,
@@ -10,7 +10,9 @@ import {
   X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Database } from '@/types/database.types'
+import toast from 'react-hot-toast'
 
 type ClassRow = Database['public']['Tables']['classes']['Row']
 type Attendance = Database['public']['Tables']['attendance']['Row']
@@ -34,12 +36,21 @@ const formatDate = (isoDate: string) =>
 const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
   const [attendees, setAttendees] = useState<Attendance[]>([])
   const [suggestions, setSuggestions] = useState<ProfessorSuggestion[]>([])
-  const [attendeeName, setAttendeeName] = useState('')
+  const [userVotes, setUserVotes] = useState<Set<string>>(new Set())
   const [profName, setProfName] = useState('')
   const [profTopic, setProfTopic] = useState('')
+  const [suggestionError, setSuggestionError] = useState('')
   const [attending, setAttending] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
   const [voting, setVoting] = useState<string | null>(null)
+  const { user } = useAuth()
+  const attendeeName = useMemo(() => {
+    const name =
+      (user?.user_metadata as Record<string, unknown> | undefined)?.full_name ||
+      user?.email ||
+      ''
+    return name as string
+  }, [user])
 
   useEffect(() => {
     const body = document.querySelector('body')
@@ -66,28 +77,42 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
 
     setAttendees(attendeeRows ?? [])
     setSuggestions(suggestionRows ?? [])
-  }, [classItem.id])
+
+    if (user?.id && suggestionRows && suggestionRows.length > 0) {
+      const suggestionIds = suggestionRows.map((row) => row.id)
+      const { data: voteRows } = await supabase
+        .from('professor_suggestion_votes')
+        .select('suggestion_id')
+        .eq('user_id', user.id)
+        .in('suggestion_id', suggestionIds)
+      setUserVotes(new Set((voteRows ?? []).map((vote) => vote.suggestion_id)))
+    } else {
+      setUserVotes(new Set())
+    }
+  }, [classItem.id, user?.id])
 
   useEffect(() => {
     loadDetails()
   }, [loadDetails])
 
-  const handleAttend = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAttend = async () => {
     if (!attendeeName.trim()) return
     setAttending(true)
     await supabase.from('attendance').insert({
       attendee_name: attendeeName.trim(),
       class_id: classItem.id,
     })
-    setAttendeeName('')
     setAttending(false)
     loadDetails()
   }
 
   const handleSuggestion = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!profName.trim() || !profTopic.trim()) return
+    if (!profName.trim() || !profTopic.trim()) {
+      setSuggestionError('Instructor name and topic are both required.')
+      return
+    }
+    setSuggestionError('')
     setSuggesting(true)
     await supabase.from('professor_suggestions').insert({
       class_id: classItem.id,
@@ -100,13 +125,34 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
     loadDetails()
   }
 
-  const handleVote = async (suggestionId: string, currentVotes: number) => {
+  const handleVote = async (suggestionId: string) => {
+    if (!user) {
+      toast.error('Please sign in to vote on speakers.')
+      return
+    }
+    if (userVotes.has(suggestionId)) {
+      toast('You have already voted for this speaker.', { icon: 'ℹ️' })
+      return
+    }
     setVoting(suggestionId)
-    await supabase
-      .from('professor_suggestions')
-      .update({ votes: currentVotes + 1 })
-      .eq('id', suggestionId)
+    const { error } = await supabase
+      .from('professor_suggestion_votes')
+      .insert({ suggestion_id: suggestionId, user_id: user.id })
     setVoting(null)
+    if (error) {
+      if (error.message.toLowerCase().includes('duplicate')) {
+        toast('You have already voted for this speaker.', { icon: 'ℹ️' })
+        setUserVotes((prev) => {
+          const next = new Set(prev)
+          next.add(suggestionId)
+          return next
+        })
+      } else {
+        toast.error('Unable to record your vote right now.')
+      }
+      return
+    }
+    toast.success('Thanks for voting!')
     loadDetails()
   }
 
@@ -165,22 +211,14 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
                   </p>
                 </div>
               </div>
-              <form onSubmit={handleAttend} className='flex flex-col gap-3'>
-                <input
-                  type='text'
-                  placeholder='Enter your name'
-                  value={attendeeName}
-                  onChange={(e) => setAttendeeName(e.target.value)}
-                  className='border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40'
-                />
-                <button
-                  type='submit'
-                  disabled={attending}
-                  className='bg-primary text-white rounded-xl py-3 font-semibold hover:bg-primary/90 transition disabled:opacity-60 disabled:cursor-not-allowed'
-                >
-                  {attending ? 'Checking you in...' : 'Check me in'}
-                </button>
-              </form>
+              <button
+                type='button'
+                onClick={handleAttend}
+                disabled={attending || !attendeeName}
+                className='bg-primary text-white rounded-xl py-3 font-semibold hover:bg-primary/90 transition disabled:opacity-60 disabled:cursor-not-allowed w-full'
+              >
+                {attending ? 'Checking you in...' : 'Check me in'}
+              </button>
               {attendees.length > 0 && (
                 <ul className='mt-4 space-y-2 max-h-44 overflow-y-auto pr-2 text-sm text-gray-600'>
                   {attendees.map((person) => (
@@ -208,18 +246,21 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
               <form onSubmit={handleSuggestion} className='flex flex-col gap-3'>
                 <input
                   type='text'
-                  placeholder='Instructor name'
+                  placeholder='Instructor name (required)'
                   value={profName}
                   onChange={(e) => setProfName(e.target.value)}
                   className='border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40'
                 />
                 <input
                   type='text'
-                  placeholder='Topic you would like covered'
+                  placeholder='Topic you would like covered (required)'
                   value={profTopic}
                   onChange={(e) => setProfTopic(e.target.value)}
                   className='border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40'
                 />
+                {suggestionError && (
+                  <p className='text-sm text-red-500'>{suggestionError}</p>
+                )}
                 <button
                   type='submit'
                   disabled={suggesting}
@@ -252,10 +293,12 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
                       {suggestion.topic}
                     </p>
                     <button
-                      onClick={() =>
-                        handleVote(suggestion.id, suggestion.votes ?? 0)
+                      onClick={() => handleVote(suggestion.id)}
+                      disabled={
+                        !user ||
+                        voting === suggestion.id ||
+                        userVotes.has(suggestion.id)
                       }
-                      disabled={voting === suggestion.id}
                       className='mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary px-3 py-1.5 border border-primary rounded-full hover:bg-primary hover:text-white transition disabled:opacity-60 disabled:cursor-not-allowed'
                     >
                       + {suggestion.votes ?? 0} votes
