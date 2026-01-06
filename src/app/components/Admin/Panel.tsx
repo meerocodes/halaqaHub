@@ -99,7 +99,15 @@ const AdminPanel = () => {
     if (!editingClass) return
 
     const payload: Partial<Class> = {
-      ...editingClass,
+      id: editingClass.id,
+      title: editingClass.title,
+      subtitle: editingClass.subtitle,
+      description: editingClass.description,
+      location: editingClass.location,
+      class_date: editingClass.class_date,
+      duration_minutes: editingClass.duration_minutes,
+      qa_is_open: editingClass.qa_is_open,
+      qa_open: editingClass.qa_open,
     }
 
     const { error } = editingClass.id
