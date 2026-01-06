@@ -18,7 +18,9 @@ export default function RootLayout({
         <AuthProvider>
           <Aoscompo>
             <Header />
-            {children}
+            <main className='pt-24'>
+              {children}
+            </main>
             <Footer />
           </Aoscompo>
           <ScrollToTop />

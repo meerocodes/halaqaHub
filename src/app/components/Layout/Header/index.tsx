@@ -2,38 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Logo from './Logo'
-import HeaderLink from '../Header/Navigation/HeaderLink'
-import MobileHeaderLink from '../Header/Navigation/MobileHeaderLink'
 import Signin from '@/app/components/Auth/SignIn'
 import { Icon } from '@iconify/react/dist/iconify.js'
-import { HeaderItem } from '@/app/types/menu'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 const Header: React.FC = () => {
-  const [headerData, setHeaderData] = useState<HeaderItem[]>([])
-
   const [navbarOpen, setNavbarOpen] = useState(false)
   const [sticky, setSticky] = useState(false)
   const [isSignInOpen, setIsSignInOpen] = useState(false)
   const { user, isAdmin, signOut } = useAuth()
   const signInRef = useRef<HTMLDivElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch('/api/data')
-        if (!res.ok) throw new Error('Failed to fetch')
-        const data = await res.json()
-        setHeaderData(data.HeaderData)
-      } catch (error) {
-        console.error('Error fetching services:', error)
-      }
-    }
-    fetchData()
-  }, [])
 
   const handleScroll = useCallback(() => {
     setSticky(window.scrollY >= 10)
@@ -94,12 +75,7 @@ const Header: React.FC = () => {
       <div>
         <div className='container mx-auto max-w-7xl px-4 flex items-center justify-between'>
           <Logo />
-          <nav className='hidden lg:flex grow items-center gap-8 justify-start ml-14'>
-            {headerData.map((item, index) => (
-              <HeaderLink key={index} item={item} />
-            ))}
-          </nav>
-          <div className='flex items-center gap-4'>
+          <div className='flex items-center gap-4 ml-auto'>
             {isAdmin && (
               <Link
                 href='/admin'
@@ -179,9 +155,6 @@ const Header: React.FC = () => {
             </button>
           </div>
           <nav className='flex flex-col items-start p-4'>
-            {headerData.map((item, index) => (
-              <MobileHeaderLink key={index} item={item} />
-            ))}
             {isAdmin && (
               <Link
                 href='/admin'
