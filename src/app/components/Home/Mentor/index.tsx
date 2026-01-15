@@ -6,26 +6,28 @@ import { supabase } from '@/lib/supabaseClient'
 import type { Database } from '@/types/database.types'
 
 type SlideRow = Database['public']['Tables']['slides']['Row'] & {
-  classes?: { title: string } | null
+  classes?: { title: string; class_date: string } | null
 }
 
 const SlidesSection = () => {
   const [slides, setSlides] = useState<SlideRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     const loadSlides = async () => {
       const { data } = await supabase
         .from('slides')
-        .select('*, classes(title)')
+        .select('*, classes(title, class_date)')
         .order('created_at', { ascending: false })
-        .limit(6)
       setSlides((data as SlideRow[]) ?? [])
       setLoading(false)
     }
 
     loadSlides()
   }, [])
+
+  const displayedSlides = showAll ? slides : slides.slice(0, 3)
 
   return (
     <section id='resources-section'>
@@ -42,6 +44,15 @@ const SlidesSection = () => {
               Catch up on what you missed or review tonight&apos;s session.
             </p>
           </div>
+          {!loading && slides.length > 3 && (
+            <button
+              type='button'
+              onClick={() => setShowAll((prev) => !prev)}
+              className='text-sm font-semibold text-primary hover:underline'
+            >
+              {showAll ? 'View fewer materials' : 'View all course material'}
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -58,14 +69,14 @@ const SlidesSection = () => {
             Materials will appear here as soon as an instructor uploads them.
           </div>
         ) : (
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-            {slides.map((slide) => (
+          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6'>
+            {displayedSlides.map((slide) => (
               <a
                 key={slide.id}
                 href={slide.url || '#'}
                 target={slide.url ? '_blank' : undefined}
                 rel={slide.url ? 'noreferrer' : undefined}
-                className='bg-white rounded-3xl border border-gray-100 p-6 shadow-sm hover:border-primary hover:-translate-y-1 transition duration-200 flex flex-col justify-between gap-4'
+                className='bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm hover:border-primary hover:-translate-y-1 transition duration-200 flex flex-col justify-between gap-4'
               >
                 <div className='flex items-center gap-3'>
                   <span className='bg-primary/10 text-primary rounded-full p-3'>
@@ -75,17 +86,25 @@ const SlidesSection = () => {
                     <p className='text-xs uppercase tracking-[0.3em] text-gray-500'>
                       {slide.classes?.title ?? 'General'}
                     </p>
-                    <p className='text-lg font-semibold text-black'>
+                    <p className='text-base sm:text-lg font-semibold text-black'>
                       {slide.title}
                     </p>
                   </div>
                 </div>
                 <div className='flex items-center justify-between text-sm text-gray-500'>
                   <p>
-                    {new Date(slide.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {slide.classes?.class_date
+                      ? new Date(slide.classes.class_date).toLocaleDateString(
+                          'en-US',
+                          {
+                            month: 'short',
+                            day: 'numeric',
+                          }
+                        )
+                      : new Date(slide.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                   </p>
                   <span className='inline-flex items-center gap-1 text-primary font-semibold'>
                     <Link2 className='w-4 h-4' />

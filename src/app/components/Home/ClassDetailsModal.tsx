@@ -267,7 +267,7 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
                     : 'Checking you in...'
                   : currentAttendance
                     ? 'Uncheck me'
-                    : 'Check me in'}
+                    : 'Attending'}
               </button>
               {attendees.length > 0 && (
                 <ul className='mt-4 space-y-2 max-h-44 overflow-y-auto pr-2 text-sm text-gray-600'>

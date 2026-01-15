@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import type { Database } from '@/types/database.types'
+import ClassDetailsModal from '@/app/components/Home/ClassDetailsModal'
 
 type ClassRow = Database['public']['Tables']['classes']['Row']
 
@@ -12,6 +13,7 @@ const EventCalendar = () => {
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedClass, setSelectedClass] = useState<ClassRow | null>(null)
 
   useEffect(() => {
     const loadClasses = async () => {
@@ -211,16 +213,18 @@ const EventCalendar = () => {
                             <div className='text-base'>{day}</div>
                             {classesOnThisDay.length > 0 && (
                               <div
-                                className={`text-[11px] mt-1 font-semibold ${
+                                className={`mt-1 h-1.5 w-6 rounded-full ${
                                   isSelected
-                                    ? 'text-white'
+                                    ? 'bg-white/80'
                                     : hasUpcoming
-                                      ? 'text-primary'
-                                      : 'text-gray-500'
+                                      ? 'bg-primary/70'
+                                      : 'bg-gray-400/60'
                                 }`}
                               >
-                                {classesOnThisDay.length} event
-                                {classesOnThisDay.length > 1 ? 's' : ''}
+                                <span className='sr-only'>
+                                  {classesOnThisDay.length} event
+                                  {classesOnThisDay.length > 1 ? 's' : ''}
+                                </span>
                               </div>
                             )}
                           </>
@@ -251,13 +255,15 @@ const EventCalendar = () => {
                     const classDate = new Date(cls.class_date)
                     const isPast = classDate < now
                     return (
-                      <div
+                      <button
                         key={cls.id}
+                        type='button'
+                        onClick={() => setSelectedClass(cls)}
                         className={`border rounded-lg p-4 transition ${
                           isPast
                             ? 'border-gray-200 bg-gray-50'
                             : 'border-gray-200 hover:border-primary'
-                        }`}
+                        } text-left`}
                       >
                         <div className='flex items-center justify-between mb-2'>
                           <p
@@ -290,7 +296,7 @@ const EventCalendar = () => {
                         {cls.location && (
                           <p className='text-xs text-gray-500'>📍 {cls.location}</p>
                         )}
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -307,6 +313,12 @@ const EventCalendar = () => {
           </div>
         </div>
       </div>
+      {selectedClass && (
+        <ClassDetailsModal
+          classItem={selectedClass}
+          onClose={() => setSelectedClass(null)}
+        />
+      )}
     </section>
   )
 }

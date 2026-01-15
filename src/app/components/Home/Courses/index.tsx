@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { CalendarDays, Clock4, MapPin, NotebookText } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronUp, Clock4, MapPin } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import type { Database } from '@/types/database.types'
 import ClassDetailsModal from '../ClassDetailsModal'
@@ -13,7 +13,7 @@ const ClassSchedule = () => {
   const [classes, setClasses] = useState<ClassRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedClass, setSelectedClass] = useState<ClassRow | null>(null)
-  const [upcomingLimit, setUpcomingLimit] = useState(1)
+  const [showUpcomingExpanded, setShowUpcomingExpanded] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -115,7 +115,7 @@ const ClassSchedule = () => {
           )}
         </div>
 
-        <div className='grid gap-6 lg:grid-cols-[2fr,1fr]'>
+        <div className='grid gap-6'>
           <div className='bg-white border border-gray-100 rounded-3xl p-6 shadow-sm'>
             <div className='flex items-center gap-3 mb-6'>
               <CalendarDays className='text-primary w-6 h-6' />
@@ -130,23 +130,22 @@ const ClassSchedule = () => {
                 </p>
               </div>
             </div>
-            <div className='flex flex-wrap items-center justify-between gap-3 mb-4'>
-              <div className='flex items-center gap-2 text-sm text-gray-600'>
-                <label htmlFor='upcoming-limit' className='font-semibold'>
-                  Show
-                </label>
-                <select
-                  id='upcoming-limit'
-                  value={upcomingLimit}
-                  onChange={(event) => {
-                    setUpcomingLimit(Number(event.target.value))
-                  }}
-                  className='border border-gray-200 rounded-lg px-3 py-2 text-sm'
-                >
-                  <option value={1}>1 class</option>
-                  <option value={3}>3 classes</option>
-                </select>
-              </div>
+            <div className='flex items-center justify-between gap-3 mb-4'>
+              <button
+                type='button'
+                onClick={() => setShowUpcomingExpanded((prev) => !prev)}
+                className='inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-primary transition'
+                aria-expanded={showUpcomingExpanded}
+              >
+                {showUpcomingExpanded ? 'Show fewer' : 'Show more'}
+                <span className='inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 bg-white shadow-sm'>
+                  {showUpcomingExpanded ? (
+                    <ChevronUp className='w-4 h-4 text-gray-700' />
+                  ) : (
+                    <ChevronDown className='w-4 h-4 text-gray-700' />
+                  )}
+                </span>
+              </button>
               <a
                 href='#calendar-section'
                 className='text-sm font-semibold text-primary hover:underline'
@@ -170,7 +169,9 @@ const ClassSchedule = () => {
               </div>
             ) : (
               <div className='space-y-4'>
-                {upcomingClasses.slice(0, upcomingLimit).map((classItem) => {
+                {upcomingClasses
+                  .slice(0, showUpcomingExpanded ? 3 : 1)
+                  .map((classItem) => {
                   const classDate = new Date(classItem.class_date)
                   return (
                     <button
@@ -226,59 +227,6 @@ const ClassSchedule = () => {
             )}
           </div>
 
-          <div className='bg-cream rounded-3xl p-6 border border-orange/30'>
-            <div className='flex items-center gap-3 mb-4'>
-              <NotebookText className='text-primary w-6 h-6' />
-              <div>
-                <p className='text-sm uppercase tracking-[0.3em] text-gray-500'>
-                  Today at a glance
-                </p>
-                <p className='text-lg font-semibold text-black'>
-                  {todayClasses.length > 0
-                    ? `${todayClasses.length} sessions`
-                    : 'No sessions today'}
-                </p>
-              </div>
-            </div>
-            {todayClasses.length === 0 ? (
-              <p className='text-gray-500 text-sm'>
-                We&apos;ll post the next halaqa in this space. In the meantime,
-                browse the upcoming schedule or revisit slide decks below.
-              </p>
-            ) : (
-              <ul className='space-y-3'>
-                {todayClasses.map((classItem) => (
-                  <li
-                    key={classItem.id}
-                    className='bg-white rounded-2xl p-4 border border-white hover:border-primary/40 transition'
-                  >
-                    <div className='flex items-center justify-between'>
-                      <div>
-                        <p className='text-sm text-gray-500'>
-                          {new Date(classItem.class_date).toLocaleTimeString(
-                            'en-US',
-                            {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            }
-                          )}
-                        </p>
-                        <p className='text-base font-semibold'>
-                          {classItem.title}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => openClassDetails(classItem)}
-                        className='text-sm text-primary font-semibold'
-                      >
-                        Details
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
         </div>
       </div>
 
