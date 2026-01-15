@@ -10,7 +10,6 @@ const ContactForm = () => {
     phnumber: '',
     Message: '',
   })
-  const [submitted, setSubmitted] = useState(false)
   const [showThanks, setShowThanks] = useState(false)
   const [loader, setLoader] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
@@ -21,7 +20,7 @@ const ContactForm = () => {
     )
     setIsFormValid(isValid)
   }, [formData])
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prevData) => ({
       ...prevData,
@@ -29,13 +28,15 @@ const ContactForm = () => {
     }))
   }
   const reset = () => {
-    formData.firstname = ''
-    formData.lastname = ''
-    formData.email = ''
-    formData.phnumber = ''
-    formData.Message = ''
+    setFormData({
+      firstname: '',
+      lastname: '',
+      email: '',
+      phnumber: '',
+      Message: '',
+    })
   }
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoader(true)
 
@@ -53,7 +54,6 @@ const ContactForm = () => {
       .then((response) => response.json())
       .then((data) => {
         if (data.success) {
-          setSubmitted(true)
           setShowThanks(true)
           reset()
 
@@ -64,9 +64,11 @@ const ContactForm = () => {
 
         reset()
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         setLoader(false)
-        console.log(error.message)
+        if (error instanceof Error) {
+          console.log(error.message)
+        }
       })
   }
   return (

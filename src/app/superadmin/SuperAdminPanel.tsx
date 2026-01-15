@@ -86,6 +86,32 @@ const SuperAdminPanel = () => {
     }
   }
 
+  const demoteUser = async (id: string, email?: string | null) => {
+    if (!token) return
+    const toastId = toast.loading('Updating role…')
+    try {
+      const response = await fetch(
+        `/api/superadmin/users/${id}/demote`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error ?? 'Unable to update user')
+      }
+      toast.success(`${email ?? 'User'} is now a normal user.`, { id: toastId })
+      fetchUsers(page)
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to update user'
+      toast.error(message, { id: toastId })
+    }
+  }
+
   return (
     <div className='space-y-8'>
       <div className='space-y-2'>
@@ -176,9 +202,18 @@ const SuperAdminPanel = () => {
                       </td>
                       <td className='px-6 py-4 text-right'>
                         {isAdmin ? (
-                          <span className='px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary'>
-                            Admin
-                          </span>
+                          <div className='flex items-center justify-end gap-3'>
+                            <span className='px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary'>
+                              Admin
+                            </span>
+                            <button
+                              onClick={() =>
+                                demoteUser(userItem.id, userItem.email)
+                              }
+                              className='px-3 py-1.5 text-xs font-semibold rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition'>
+                              Downgrade to user
+                            </button>
+                          </div>
                         ) : (
                           <button
                             onClick={() =>

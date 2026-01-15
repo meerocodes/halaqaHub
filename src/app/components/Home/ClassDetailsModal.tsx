@@ -51,6 +51,10 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
       ''
     return name as string
   }, [user])
+  const currentAttendance = useMemo(
+    () => attendees.find((person) => person.user_id === user?.id) ?? null,
+    [attendees, user?.id]
+  )
 
   useEffect(() => {
     const body = document.querySelector('body')
@@ -101,6 +105,9 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
       return
     }
     if (!attendeeName.trim()) return
+    if (!window.confirm('Confirm check-in for this class?')) {
+      return
+    }
     setAttending(true)
     const { error } = await supabase.from('attendance').insert({
       attendee_name: attendeeName.trim(),
@@ -117,6 +124,25 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
       return
     }
     toast.success('You are checked in!')
+    loadDetails()
+  }
+
+  const handleUnattend = async () => {
+    if (!user || !currentAttendance) return
+    if (!window.confirm('Remove your check-in for this class?')) {
+      return
+    }
+    setAttending(true)
+    const { error } = await supabase
+      .from('attendance')
+      .delete()
+      .eq('id', currentAttendance.id)
+    setAttending(false)
+    if (error) {
+      toast.error('Unable to remove your check-in right now.')
+      return
+    }
+    toast.success('You are no longer checked in.')
     loadDetails()
   }
 
@@ -227,11 +253,21 @@ const ClassDetailsModal = ({ classItem, onClose }: ClassDetailsModalProps) => {
               </div>
               <button
                 type='button'
-                onClick={handleAttend}
+                onClick={currentAttendance ? handleUnattend : handleAttend}
                 disabled={attending || !attendeeName || !user}
-                className='bg-primary text-white rounded-xl py-3 font-semibold hover:bg-primary/90 transition disabled:opacity-60 disabled:cursor-not-allowed w-full'
+                className={
+                  currentAttendance
+                    ? 'border border-gray-200 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed w-full'
+                    : 'bg-primary text-white rounded-xl py-3 font-semibold hover:bg-primary/90 transition disabled:opacity-60 disabled:cursor-not-allowed w-full'
+                }
               >
-                {attending ? 'Checking you in...' : 'Check me in'}
+                {attending
+                  ? currentAttendance
+                    ? 'Removing your check-in...'
+                    : 'Checking you in...'
+                  : currentAttendance
+                    ? 'Uncheck me'
+                    : 'Check me in'}
               </button>
               {attendees.length > 0 && (
                 <ul className='mt-4 space-y-2 max-h-44 overflow-y-auto pr-2 text-sm text-gray-600'>

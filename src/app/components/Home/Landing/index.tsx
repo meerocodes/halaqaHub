@@ -1,42 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import {
-  MessageSquare,
-  BookOpenCheck,
-  CalendarDays,
-  Sparkles,
-} from 'lucide-react'
+import { CalendarDays, Sparkles } from 'lucide-react'
 import Signin from '@/app/components/Auth/SignIn'
 import SignUp from '@/app/components/Auth/SignUp'
 import { supabase } from '@/lib/supabaseClient'
-
-const featureItems = [
-  {
-    icon: CalendarDays,
-    title: 'Guided nightly schedule',
-    description:
-      'Preview what is being taught each evening, who is leading, and where to join—online or on-site.',
-  },
-  {
-    icon: BookOpenCheck,
-    title: 'Live slide tracking',
-    description:
-      'Follow the exact slides your instructor is presenting so you never lose your place.',
-  },
-  {
-    icon: MessageSquare,
-    title: 'Interactive Q&A wall',
-    description:
-      'Drop questions, upvote important topics, and keep a threaded history of every answer.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Community heartbeat',
-    description:
-      'Attendance, announcements, and reminders flow into one timeline so everyone stays aligned.',
-  },
-]
 
 const LandingExperience = () => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')

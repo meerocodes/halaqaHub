@@ -8,7 +8,7 @@ const MagicLink = () => {
   const [email, setEmail] = useState("");
   const [loader, setLoader] = useState(false);
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!email) {
@@ -31,8 +31,10 @@ const MagicLink = () => {
             setLoader(false);
           }
         })
-        .catch((error) => {
-          console.log(error);
+        .catch((error: unknown) => {
+          if (error instanceof Error) {
+            console.error(error)
+          }
           toast.error("Unable to send email!");
           setLoader(false);
         });
@@ -55,9 +57,10 @@ const MagicLink = () => {
       <div className="mb-9">
         <button
           type="submit"
-          className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-primary/90"
+          disabled={loader}
+          className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Send Magic Link 
+          {loader ? 'Sending…' : 'Send Magic Link'}
         </button>
       </div>
     </form>
