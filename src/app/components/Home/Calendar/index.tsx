@@ -19,7 +19,6 @@ const EventCalendar = () => {
       const { data } = await supabase
         .from('classes')
         .select('*')
-        .gte('class_date', new Date().toISOString())
         .order('class_date', { ascending: true })
       setClasses(data ?? [])
       setLoading(false)

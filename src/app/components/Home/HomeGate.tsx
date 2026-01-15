@@ -25,9 +25,9 @@ const HomeGate = () => {
   return (
     <>
       <ClassSchedule />
-      <EventCalendar />
       <SlidesSection />
       <QASession />
+      <EventCalendar />
     </>
   )
 }

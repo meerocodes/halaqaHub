@@ -38,6 +38,14 @@ const AdminPanel = () => {
     useState<ClassWithAttendance | null>(null)
   const [editingSuggestion, setEditingSuggestion] =
     useState<Partial<ProfessorSuggestion> | null>(null)
+  const [newAttendeeName, setNewAttendeeName] = useState('')
+  const [addingAttendee, setAddingAttendee] = useState(false)
+  const [userSearchQuery, setUserSearchQuery] = useState('')
+  const [userSearchResults, setUserSearchResults] = useState<
+    Array<{ id: string; email: string | null; full_name: string }>
+  >([])
+  const [searchingUsers, setSearchingUsers] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -51,7 +59,17 @@ const AdminPanel = () => {
     }
   }, [editingClass, editingSlide])
 
+  useEffect(() => {
+    if (!viewingAttendance) {
+      setNewAttendeeName('')
+      setUserSearchQuery('')
+      setUserSearchResults([])
+      setSearchError(null)
+    }
+  }, [viewingAttendance])
+
   const loadData = async () => {
+    let classesWithAttendance: ClassWithAttendance[] = []
     const [classesRes, slidesRes] = await Promise.all([
       supabase.from('classes').select('*').order('class_date', {
         ascending: false,
@@ -63,7 +81,7 @@ const AdminPanel = () => {
 
     if (classesRes.data) {
       const classRows: Class[] = classesRes.data as Class[]
-      const classesWithAttendance = await Promise.all(
+      classesWithAttendance = await Promise.all(
         classRows.map(async (cls) => {
           const [{ data: attendees }, { data: suggestions }] = await Promise.all(
             [
@@ -94,6 +112,8 @@ const AdminPanel = () => {
     if (slidesRes.data) {
       setSlides(slidesRes.data)
     }
+
+    return classesWithAttendance
   }
 
   const saveClass = async () => {
@@ -164,6 +184,92 @@ const AdminPanel = () => {
     if (!confirm('Delete this attendee?')) return
     await supabase.from('attendance').delete().eq('id', id)
     await loadData()
+  }
+
+  const addAttendee = async () => {
+    if (!viewingAttendance || !newAttendeeName.trim()) return
+    setAddingAttendee(true)
+    const { error } = await supabase.from('attendance').insert({
+      attendee_name: newAttendeeName.trim(),
+      class_id: viewingAttendance.id,
+    })
+    setAddingAttendee(false)
+    if (error) {
+      alert(`Error adding attendee: ${error.message}`)
+      return
+    }
+    setNewAttendeeName('')
+    const updatedClasses = await loadData()
+    const updated = updatedClasses.find((cls) => cls.id === viewingAttendance.id)
+    setViewingAttendance(updated ?? null)
+  }
+
+  const addAttendeeByUser = async (user: {
+    id: string
+    email: string | null
+    full_name: string
+  }) => {
+    if (!viewingAttendance) return
+    setAddingAttendee(true)
+    const displayName = user.full_name || user.email || 'Attendee'
+    const { error } = await supabase.from('attendance').insert({
+      attendee_name: displayName,
+      class_id: viewingAttendance.id,
+      user_id: user.id,
+    })
+    setAddingAttendee(false)
+    if (error) {
+      alert(`Error adding attendee: ${error.message}`)
+      return
+    }
+    const updatedClasses = await loadData()
+    const updated = updatedClasses.find((cls) => cls.id === viewingAttendance.id)
+    setViewingAttendance(updated ?? null)
+  }
+
+  const searchUsers = async () => {
+    if (!userSearchQuery.trim()) {
+      setUserSearchResults([])
+      setSearchError(null)
+      return
+    }
+
+    setSearchingUsers(true)
+    setSearchError(null)
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    const accessToken = session?.access_token
+    if (!accessToken) {
+      setSearchingUsers(false)
+      setSearchError('Unable to authenticate user search.')
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `/api/admin/users/search?q=${encodeURIComponent(userSearchQuery.trim())}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Search failed.')
+      }
+
+      const payload = await response.json()
+      setUserSearchResults(payload.users ?? [])
+    } catch (error) {
+      setSearchError(
+        error instanceof Error ? error.message : 'Unable to search users.'
+      )
+    } finally {
+      setSearchingUsers(false)
+    }
   }
 
   const deleteSuggestion = async (id: string) => {
@@ -613,6 +719,76 @@ const AdminPanel = () => {
             <p className='text-gray-600 mb-4'>
               Total: {viewingAttendance.attendanceCount} attendees
             </p>
+            <div className='flex flex-col sm:flex-row gap-3 mb-6'>
+              <input
+                type='text'
+                placeholder='Add attendee name'
+                value={newAttendeeName}
+                onChange={(e) => setNewAttendeeName(e.target.value)}
+                className='flex-1 px-4 py-2 border rounded-lg text-gray-900'
+              />
+              <button
+                onClick={addAttendee}
+                disabled={addingAttendee || !newAttendeeName.trim()}
+                className='px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed'>
+                {addingAttendee ? 'Adding...' : 'Add attendee'}
+              </button>
+            </div>
+            <div className='border-t pt-5 mb-6'>
+              <p className='text-sm font-semibold text-gray-700 mb-3'>
+                Add registered user
+              </p>
+              <div className='flex flex-col sm:flex-row gap-3'>
+                <input
+                  type='text'
+                  placeholder='Search by email or full name'
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  className='flex-1 px-4 py-2 border rounded-lg text-gray-900'
+                />
+                <button
+                  onClick={searchUsers}
+                  disabled={searchingUsers || !userSearchQuery.trim()}
+                  className='px-4 py-2 border border-emerald-600 text-emerald-700 rounded-lg hover:bg-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed'>
+                  {searchingUsers ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+              {searchError && (
+                <p className='text-sm text-red-600 mt-2'>{searchError}</p>
+              )}
+              {userSearchResults.length > 0 && (
+                <div className='mt-4 space-y-2'>
+                  {userSearchResults.map((user) => (
+                    <div
+                      key={user.id}
+                      className='flex items-center justify-between gap-3 border rounded-lg px-4 py-3'>
+                      <div>
+                        <p className='text-sm font-semibold text-gray-800'>
+                          {user.full_name || 'Unnamed user'}
+                        </p>
+                        <p className='text-xs text-gray-500'>
+                          {user.email ?? 'No email'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => addAttendeeByUser(user)}
+                        disabled={addingAttendee}
+                        className='text-sm font-semibold text-emerald-700 border border-emerald-600 rounded-full px-3 py-1 hover:bg-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed'>
+                        Add
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!searchingUsers &&
+                userSearchQuery.trim() &&
+                userSearchResults.length === 0 &&
+                !searchError && (
+                  <p className='text-sm text-gray-500 mt-3'>
+                    No users found.
+                  </p>
+                )}
+            </div>
             {viewingAttendance.attendees.length === 0 ? (
               <p className='text-center text-gray-500 py-8'>No attendees yet</p>
             ) : (

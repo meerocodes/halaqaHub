@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { CalendarDays, Clock4, MapPin, NotebookText } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import type { Database } from '@/types/database.types'
@@ -12,6 +13,10 @@ const ClassSchedule = () => {
   const [classes, setClasses] = useState<ClassRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedClass, setSelectedClass] = useState<ClassRow | null>(null)
+  const [upcomingLimit, setUpcomingLimit] = useState(1)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     const loadClasses = async () => {
@@ -27,11 +32,47 @@ const ClassSchedule = () => {
     loadClasses()
   }, [])
 
+  useEffect(() => {
+    const classId = searchParams.get('class')
+    if (!classId) {
+      if (selectedClass) {
+        setSelectedClass(null)
+      }
+      return
+    }
+
+    if (selectedClass?.id && String(selectedClass.id) === classId) {
+      return
+    }
+
+    const match = classes.find((cls) => String(cls.id) === classId)
+    if (match) {
+      setSelectedClass(match)
+    }
+  }, [classes, searchParams, selectedClass])
+
+  const updateUrlForClass = (classId?: string | null) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (classId) {
+      params.set('class', classId)
+    } else {
+      params.delete('class')
+    }
+    const query = params.toString()
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+  }
+
+  const openClassDetails = (classItem: ClassRow) => {
+    setSelectedClass(classItem)
+    updateUrlForClass(String(classItem.id))
+  }
+
   const upcomingClasses = useMemo(() => {
     const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     return classes
-      .filter((cls) => new Date(cls.class_date) >= now)
-      .slice(0, 6)
+      .filter((cls) => new Date(cls.class_date) >= startOfToday)
+      .slice(0, 3)
   }, [classes])
 
   const todayClasses = useMemo(() => {
@@ -66,7 +107,7 @@ const ClassSchedule = () => {
           </div>
           {nextClass && (
             <button
-              onClick={() => setSelectedClass(nextClass)}
+              onClick={() => openClassDetails(nextClass)}
               className='bg-primary text-white font-medium px-6 py-3 rounded-full border border-primary hover:bg-transparent hover:text-primary transition duration-300'
             >
               View next class
@@ -89,6 +130,30 @@ const ClassSchedule = () => {
                 </p>
               </div>
             </div>
+            <div className='flex flex-wrap items-center justify-between gap-3 mb-4'>
+              <div className='flex items-center gap-2 text-sm text-gray-600'>
+                <label htmlFor='upcoming-limit' className='font-semibold'>
+                  Show
+                </label>
+                <select
+                  id='upcoming-limit'
+                  value={upcomingLimit}
+                  onChange={(event) => {
+                    setUpcomingLimit(Number(event.target.value))
+                  }}
+                  className='border border-gray-200 rounded-lg px-3 py-2 text-sm'
+                >
+                  <option value={1}>1 class</option>
+                  <option value={3}>3 classes</option>
+                </select>
+              </div>
+              <a
+                href='#calendar-section'
+                className='text-sm font-semibold text-primary hover:underline'
+              >
+                View full schedule
+              </a>
+            </div>
 
             {loading ? (
               <div className='animate-pulse space-y-4'>
@@ -105,12 +170,12 @@ const ClassSchedule = () => {
               </div>
             ) : (
               <div className='space-y-4'>
-                {upcomingClasses.map((classItem) => {
+                {upcomingClasses.slice(0, upcomingLimit).map((classItem) => {
                   const classDate = new Date(classItem.class_date)
                   return (
                     <button
                       key={classItem.id}
-                      onClick={() => setSelectedClass(classItem)}
+                      onClick={() => openClassDetails(classItem)}
                       className='w-full text-left border border-gray-200 rounded-2xl p-5 hover:border-primary transition duration-200 flex flex-col sm:flex-row sm:items-center gap-4'
                     >
                       <div className='sm:w-44'>
@@ -203,7 +268,7 @@ const ClassSchedule = () => {
                         </p>
                       </div>
                       <button
-                        onClick={() => setSelectedClass(classItem)}
+                        onClick={() => openClassDetails(classItem)}
                         className='text-sm text-primary font-semibold'
                       >
                         Details
@@ -220,7 +285,10 @@ const ClassSchedule = () => {
       {selectedClass && (
         <ClassDetailsModal
           classItem={selectedClass}
-          onClose={() => setSelectedClass(null)}
+          onClose={() => {
+            setSelectedClass(null)
+            updateUrlForClass(null)
+          }}
         />
       )}
     </section>
